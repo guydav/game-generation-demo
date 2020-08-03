@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | AI2-Thor</title>
+      <script>
+      window.game_build = ".";
+      window.game_url =  "Build/goal-experiment-web.json";
+      // window.game_build = ".";
+      // window.game_url =  "Build/goal-experiment-test.json";
+      </script>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+    <link rel="stylesheet" href="TemplateData/style.css">
+<!--
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.10.2/underscore-min.js" crossorigin="anonymous"></script> -->
+
+    <!-- <script src="TemplateData/scripts/UnityProgress.js"></script> -->
+    <!-- <script src="TemplateData/script.js"></script> -->
+    <script data-main="TemplateData/scripts/main.js" src="TemplateData/scripts/require.js"></script>
+
+  </head>
+  <body>
+
+    <div class="main">
+       <div class="container-fluid">
+         <div class="row">
+           <div class="side-col col-md-3">
+             <div class="row">
+               <p class="instructions-title">Event Log</p>
+             </div>
+
+             <div class="row">
+               <button id="event-log-reset" class="log-button btn btn-secondary">Reset Log</button>
+             </div>
+
+             <div id="event-log" class="event-log row">
+
+            </div>
+
+          </div>
+
+          <div class="webgl-content col-md-6">
+            <div id="gameContainer"></div>
+              <div class="footer">
+                 <div class="webgl-logo"></div>
+                <!-- <div class="fullscreen" onclick="gameInstance.SetFullscreen(1)"></div> -->
+                <div class="title">AI2-Thor</div>
+              </div>
+          </div>
+
+          <div class="side-col col-md-3">
+
+            <div class="row controls-row">
+              <p class="instructions-title">Tutorial Instructions</p>
+            </div>
+
+            <div id="instructions" class="log-button row instruction-set">
+
+            </div>
+
+            <div id="tutorial-end" class="event-log row instruction-set">
+              <button id="end-tutorial-button" style="display: none" class="event-log button btn-secondary">End Tutorial</button>
+            </div>
+
+            <div id="game-ready" class="event-log row instruction-set">
+              <button id="game-ready-button" style="display: none" class="event-log button btn-secondary">Game Ready</button>
+            </div>
+
+            <div id="game-form-parent" class="row" >
+              <form id="game-form" style="display: none">
+                <!--  -->
+                <div class="form-group">
+                    <label for="game-name-input">Game Name</label>
+                    <input type="text" class="form-control" id="game-name-input" name="name" placeholder="Enter game name">
+                </div>
+
+                <div class="form-group">
+                    <label for="game-description-input">Game Description</label>
+                    <textarea class="form-control" id="game-description-input" name="description" rows="3" placeholder="Please explain your game"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="game-scoring-input">Game Scoring</label>
+                    <textarea class="form-control" id="game-scoring-input" name="scoring" rows="2" placeholder="Please explain how your game and is scored"></textarea>
+                </div>
+                <input type="hidden" id='csrf' name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-primary" disabled>Submit</button>
+              </form>
+            </div>
+
+            <div id="play-game" class="log-button row" style="display: none;">
+
+              <div id="play-game-instructions" class="instruction-set">
+                <div class="log-message" id="play-game-name">
+                  <span class="game-heading">Game name:</span>
+                </div>
+                <div class="log-message" id="play-game-description">
+                  <span class="game-heading">Game description:</span>
+                </div>
+                <div class="log-message" id="play-game-scoring">
+                  <span class="game-heading">Game scoring:</span>
+                </div>
+              </div>
+
+              <div class="log-message">
+                When you're done, please score yourself:
+              </div>
+
+              <form id="game-score-form">
+                <div class="form-group">
+                    <label for="game-score-input">Score</label>
+                    <input type="text" class="form-control" id="game-score-input" name="score" placeholder="Enter your score">
+                </div>
+
+                <div class="form-group">
+                    <label for="game-score-explanation">Scoring Explanation</label>
+                    <textarea class="form-control" id="game-score-explanation" name="explanation" rows="3" placeholder="Please explain the scoring"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="game-score-feedback">Game Thoughts or Feedback</label>
+                    <textarea class="form-control" id="game-score-feedback" name="feedback" rows="3" placeholder="Now that you've played the game, if you have any thoughts or feedback about it, please type it here"></textarea>
+                </div>
+
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-primary" disabled>Submit</button>
+              </form>
+            </div>
+
+            <div id="play-another-game" class="log-button row" style="display: none;">
+              Would you like to play another game, and provide feedback about it?
+
+              <div id="play-another-game-buttons" class="btn-group" role="group">
+                <button id="play-another-game-button" class="log-button btn btn-success">Play Another Game</button>
+                <button id="end-experiment-button" class="log-button btn btn-warning">End Experiment</button>
+              </div>
+            </div>
+
+            <div class="row controls-row">
+              <p class="instructions-title">Controls</p>
+            </div>
+
+            <!-- <div class="row controls-row">
+                <div class="col-md-4 controls-col"> <img class="controls-img-medium" src="TemplateData/images/esc.png"/> </div>
+                <div class="col-md-8 controls-col">To enable or disable game controls.</div>
+            </div> -->
+
+            <div class="row controls-row">
+                <img class="controls-img-medium" src="TemplateData/images/esc.png"/>
+                <span>To enable or disable game controls.</span>
+            </div>
+
+            <!-- <div class="row controls-row">
+                <div class="col-md-4 controls-col"> <img class="controls-img-medium" src="TemplateData/images/mouselook.png"/> </div>
+                <div class="col-md-8 controls-col">Use your mouse to look around.</div>
+            </div> -->
+
+            <div class="row controls-row">
+                <img class="controls-img-medium" src="TemplateData/images/mouselook.png"/>
+                <span>Use your mouse to look around.</span>
+            </div>
+
+            <div class="row controls-row">
+                <img class="controls-img-keys" src="TemplateData/images/WASD.png"/>
+                <span style="font-size: 30px">&nbsp;/&nbsp;</span>
+                <img class="controls-img-keys" src="TemplateData/images/arrowkeys.png"/>
+                <span>To move around.</span>
+            </div>
+
+            <div class="row controls-row">
+                <img class="controls-img-medium" src="TemplateData/images/Control.png"/>
+                <span>To crouch or stand.</span>
+            </div>
+
+            <div class="row controls-row">
+                <img class="controls-img-mouse" src="TemplateData/images/leftclick.png"/>
+                <span>To interact with an active object.</span>
+            </div>
+
+            <div class="row controls-row">
+                <img class="controls-img-mouse" src="TemplateData/images/scrollwheel.png"/>
+                <span>To move an object forward or backward.</span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div id="turk-form">
+      <form id="mturk_form" method="POST" action='https://www.mturk.com/mturk/externalSubmit'>
+          <input type="hidden" id="assignmentId" name="assignmentId"/>
+          <input type="hidden" id="data" name="data"/>
+          <!-- <script language='Javascript'>turkSetAssignmentID();</script> -->
+      </form>
+    </div>
+  </body>
+</html>
