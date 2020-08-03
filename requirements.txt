@@ -2,4 +2,5 @@ gunicorn
 flask
 flask_wtf
 sqlalchemy
+whitenoise
 

@@ -12,8 +12,13 @@ from sqlalchemy import Column, ForeignKey, Integer, String, TIMESTAMP
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+from whitenoise import WhiteNoise
+
+
 app = Flask(__name__, static_folder="./", template_folder="./")
 csrf = CSRFProtect(app)
+app.wsgi_app = WhiteNoise(app.wsgi_app, root='.')
+
 
 # TODO: deal with actually reading a proper secret key file
 app.secret_key = b'<\xf0\xa8\x99\xdb\xe5\xd1\xcd)\xd6\xfc-|z\xc8\xcc'
