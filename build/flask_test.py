@@ -15,9 +15,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from whitenoise import WhiteNoise
 
 
+def force_unityweb_gzip(headers, path, url):
+    if path.endswith('.unityweb'):
+        headers['Content-Encoding'] = 'gzip'
+
+
 app = Flask(__name__, static_folder="./", template_folder="./")
 csrf = CSRFProtect(app)
-app.wsgi_app = WhiteNoise(app.wsgi_app, root='.')
+app.wsgi_app = WhiteNoise(app.wsgi_app, root='.', mimetypes={'.unityweb': 'application/octet-stream'},
+			  add_headers_function=force_unityweb_gzip)
 
 
 # TODO: deal with actually reading a proper secret key file

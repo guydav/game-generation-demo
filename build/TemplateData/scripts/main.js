@@ -240,6 +240,11 @@ function($, _, bootstrap, UnityProgress) {
 
       $('#end-tutorial-button').click(function() {
         gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', 'FloorPlan7_physics');
+        gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
+          action: "RandomlyMoveAgent",
+          randomSeed: spawnRandomSeed
+        }));
+
         $('#end-tutorial-button').css('display', 'none');
         $('#instructions').empty();
         const message = `<div class="log-message" id="post-tutorial-instruction">
@@ -359,7 +364,7 @@ function($, _, bootstrap, UnityProgress) {
           .val('')
           .prop('checked', false)
           .prop('selected', false);
-          
+
         $('#play-game').css('display', 'none');
 
         // First, send the ajax request to get another game
@@ -431,13 +436,15 @@ function($, _, bootstrap, UnityProgress) {
         if (!gameInitialized) {
           if ('scene' in getParams && getParams['scene']) {
             gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', getParams['scene']);
+          } else {
+            gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', 'FloorPlan418_physics');
           }
           gameInitialized = true;
 
-          gameInstance.SendMessage ('FPSController', 'Step', JSON.stringify({
-            action: "RandomlyMoveAgent",
-            randomSeed: spawnRandomSeed
-          }));
+          // gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
+          //   action: "RandomlyMoveAgent",
+          //   randomSeed: spawnRandomSeed
+          // }));
         }
       };
 
