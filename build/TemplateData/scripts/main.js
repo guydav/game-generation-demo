@@ -33,6 +33,9 @@ function($, _, bootstrap, UnityProgress) {
       window.game_build = 'build' in getParams ? getParams['build'] : window.game_build;
       window.game_url = 'build' in getParams ? `${window.game_build}/Build/thor-local-WebGL.json` : window.game_url;
       let scene = getParams['scene'];
+      if (!scene) {
+        scene = 'FloorPlan302_physics';
+      }
       console.log("GAME URL: ", window.game_url);
       let hider = getParams['role'] !== 'seeker';
       let gameInitialized  = false;
@@ -93,14 +96,19 @@ function($, _, bootstrap, UnityProgress) {
       }
 
       class ObjectActionInstruction extends Instruction {
-        constructor(text, objectPattern, actionPattern, id) {
+        constructor(text, objectPattern, actionPattern, id, checker) {
           super(text, null, id);
           this.objectRE = new RegExp(objectPattern);
           this.actionRE = new RegExp(actionPattern);
+          if (checker) {
+              this.checker = checker;
+          } else {
+              this.checker = (metadata) => {return metadata.lastActionSuccess;};
+          }
         }
 
         evaluate(metadata) {
-          return this.actionRE.test(metadata.lastAction) && this.objectRE.test(metadata.lastActionObjectName);
+          return this.actionRE.test(metadata.lastAction) && this.objectRE.test(metadata.lastActionObjectName) && this.checker(metadata);
         }
       }
 
@@ -198,28 +206,35 @@ function($, _, bootstrap, UnityProgress) {
       // ];
 
       const instructions = [
-        new RepeatedObjectActionInstruction('Many objects can be picked up. Pick up and drop at least two different objects. ', '.*', 'PickupObject', 2),
-        new ObjectActionInstruction('Once you pick up an object, you can move it closer or farther away. First, pick up an object.', '.*', 'PickupObject'),
+        new RepeatedObjectActionInstruction('Many objects can be picked up.<br>Pick up and drop at least two different objects. ', '.*', 'PickupObject', 2),
+        new ObjectActionInstruction('Once you pick up an object, you can move it closer or farther away.<br>First, pick up an object.', '.*', 'PickupObject'),
         new ObjectActionInstruction('Now, use the scrollwheel to move it.', '.*', 'MoveHandDelta'),
-        new RepeatedObjectActionInstruction('Other objects can be opened and closed. Open at least two different objects. ', '.*', 'OpenObject', 2),
-        new ObjectActionInstruction('Other yet objects can be toggled (switched on and off). Find one and toggle it.', '.*', 'ToggleObject.*'),
-        new ObjectActionInstruction('Do we want another instruction on object states?', '.*', 'ToggleObject.*'),
+        new ObjectActionInstruction('Now drop the object.', '.*', 'ThrowObject'),
+        new ObjectActionInstruction('For practice, now pick up another object.', '.*', 'PickupObject'),
+        new ObjectActionInstruction('Now move it all the way in, as close to you as possible.', '.*', 'MoveHandDelta', null, (metadata) => {
+          return (metadata.lastActionSuccess == false) && (metadata.lastActionZ < 0);
+        }),
+        new ObjectActionInstruction('Now move it all the way out, as far away from you as possible.', '.*', 'MoveHandDelta', null, (metadata) => {
+          return (metadata.lastActionSuccess == false) && (metadata.lastActionZ > 0);
+        }),
+        new ObjectActionInstruction('Now drop the object.', '.*', 'ThrowObject'),
+        new RepeatedObjectActionInstruction('Other objects can be opened and closed.<br>Open at least two different objects. ', '.*', 'OpenObject', 2),
+        new ObjectActionInstruction('Other yet objects can be toggled (switched on and off).<br>Find one and toggle it.', '.*', 'ToggleObject.*'),
+        // new ObjectActionInstruction('Do we want another instruction on object states?', '.*', 'ToggleObject.*'),
       ];
 
       instructions.forEach((instruction, index) => {
         if (!instruction.id) {
           instruction.id = `instruction-${index}`;
         }
-        const message = `<div class="log-message" id="${instruction.id}">
+        const message = `<div class="log-message" id="${instruction.id}" style="display: none;">
           ${instruction.text}
           </div>`;
         $('#instructions').append(message);
       });
 
       let currentInstructionIndex = 0;
-      $(`#${instructions[currentInstructionIndex].id}`).css('font-weight', 'bold');
-
-      // TODO handler to recognize if the current insturction was performed, and if it was, make the necessary UI changes
+      $(`#${instructions[currentInstructionIndex].id}`).css('font-weight', 'bold').css('display', 'block');
 
       function instructionsEventHandler(metadata) {
         if (currentInstructionIndex >= instructions.length) {
@@ -231,19 +246,24 @@ function($, _, bootstrap, UnityProgress) {
           $(`#${currentInstruction.id}`).css('font-weight', 'normal').css('color', 'grey').css('text-decoration', 'line-through');
           currentInstructionIndex += 1;
           if (currentInstructionIndex < instructions.length) {
-            $(`#${instructions[currentInstructionIndex].id}`).css('font-weight', 'bold');
+            $(`#${instructions[currentInstructionIndex].id}`).css('font-weight', 'bold').css('display', 'block');
           } else {
             $('#end-tutorial-button').css('display', 'block');
           }
         }
       }
 
-      $('#end-tutorial-button').click(function() {
-        gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', 'FloorPlan7_physics');
+      function resetScene() {
+        gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', scene);
         gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
           action: "RandomlyMoveAgent",
           randomSeed: spawnRandomSeed
         }));
+      }
+
+      $('#end-tutorial-button').click(() => {
+        scene = 'FloorPlan326_physics';
+        resetScene();
 
         $('#end-tutorial-button').css('display', 'none');
         $('#instructions').empty();
@@ -392,6 +412,11 @@ function($, _, bootstrap, UnityProgress) {
 
       $('#end-experiment-button').click(endExperiment);
 
+      $('#reset-scene').click(() => {
+        $('#reset-scene').blur();
+        resetScene();
+      });
+
       // function savaData(url, type, ajaxData) {
       //   console.log('Ajax data:');
       //   console.log(ajaxData);
@@ -434,11 +459,7 @@ function($, _, bootstrap, UnityProgress) {
       ///// Unity callbacks
       window.onGameLoaded = function() {
         if (!gameInitialized) {
-          if ('scene' in getParams && getParams['scene']) {
-            gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', getParams['scene']);
-          } else {
-            gameInstance.SendMessage('PhysicsSceneManager', 'SwitchScene', 'FloorPlan418_physics');
-          }
+          resetScene();
           gameInitialized = true;
 
           // gameInstance.SendMessage('FPSController', 'Step', JSON.stringify({
@@ -461,6 +482,7 @@ function($, _, bootstrap, UnityProgress) {
 
       window.onUnityEvent = function(event) {
         // Logic for handling unity events
+        // console.log('Unity Event:');
         // console.log(JSON.parse(event));
       };
 
@@ -725,6 +747,9 @@ function($, _, bootstrap, UnityProgress) {
           lastActionSuccess: agentMetadata.lastActionSuccess,
           lastActionObjectId: agentMetadata.lastActionObjectId,
           lastActionObjectName: agentMetadata.lastActionObjectName,
+          lastActionX: agentMetadata.lastActionX,
+          lastActionY: agentMetadata.lastActionY,
+          lastActionZ: agentMetadata.lastActionZ,
           lastActionObject: matchingObject,
           agent: {
             x: agent.position.x,
@@ -739,6 +764,10 @@ function($, _, bootstrap, UnityProgress) {
         outputData.actions.push(eventMetadata);
         logEvent(eventMetadata);
         instructionsEventHandler(eventMetadata);
+
+        if (eventMetadata.lastAction == 'MoveHandDelta') {
+          console.log(`MoveHand | status: ${eventMetadata.lastActionSuccess} | direction: ${eventMetadata.lastActionZ > 0} `);
+        }
       }
 
       const MAX_LOG_EVENTS = 10;

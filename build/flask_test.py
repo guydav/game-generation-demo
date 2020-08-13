@@ -1,16 +1,20 @@
 import random
+import os
 
 # Flask:
 from flask import Flask, render_template, jsonify, request, g
 # using Flask-WTF CSRF protection for AJAX requests
 from flask_wtf.csrf import CSRFProtect
+# Using flask_sqlalchemy instead of raw sqlalchemy
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 # SQL Alchemy:
 import sqlalchemy
-from sqlalchemy import create_engine, func, inspect
-from sqlalchemy import Column, ForeignKey, Integer, String, TIMESTAMP
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy import create_engine, func, inspect
+# from sqlalchemy import Column, ForeignKey, Integer, String, TIMESTAMP
+# from sqlalchemy.orm import relationship, scoped_session, sessionmaker
+# from sqlalchemy.ext.declarative import declarative_base
 
 from whitenoise import WhiteNoise
 
@@ -24,44 +28,52 @@ app = Flask(__name__, static_folder="./", template_folder="./")
 csrf = CSRFProtect(app)
 app.wsgi_app = WhiteNoise(app.wsgi_app, root='.', mimetypes={'.unityweb': 'application/octet-stream'},
 			  add_headers_function=force_unityweb_gzip)
-
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # TODO: deal with actually reading a proper secret key file
 app.secret_key = b'<\xf0\xa8\x99\xdb\xe5\xd1\xcd)\xd6\xfc-|z\xc8\xcc'
 
 ### SQL Alchemy Definitions
-# The engine, db_session, and Base definitions would be in a db.py filter
+# The engine, db.session, and Base definitions would be in a db.py filter
 # https://flask.palletsprojects.com/en/1.1.x/patterns/sqlalchemy/
-engine = create_engine('sqlite:///./games.db', convert_unicode=True)
-db_session = scoped_session(sessionmaker(autocommit=False,
-                                         autoflush=False,
-                                         bind=engine))
-Base = declarative_base()
-Base.query = db_session.query_property()
+# engine = create_engine('sqlite:///./games.db', convert_unicode=True)
+# db.session = scoped_session(sessionmaker(autocommit=False,
+#                                          autoflush=False,
+#                                          bind=engine))
+# Base = declarative_base()
+# Base.query = db.session.query_property()
 
 ### SQL Alchemy model
 
 # TODO: Add a 'Player' class, to link to both the game and game scores?
 
-class Game(Base):
+class Game(db.Model):
     __tablename__ = 'games'
-    id = Column(Integer, primary_key=True)
-    player_id = Column(String(32), nullable=False)
-    name = Column(String(64), nullable=False)
-    description = Column(String(256), nullable=False)
-    scoring = Column(String(256), nullable=False)
-    timestamp = Column(TIMESTAMP(timezone=True),  server_default=func.now())
-    games_scored = relationship('GameScore')
+    id = db.Column(db.Integer, primary_key=True)
+    player_id = db.Column(db.String(32), nullable=False)
+    name = db.Column(db.String(64), nullable=False)
+    description = db.Column(db.String(256), nullable=False)
+    scoring = db.Column(db.String(256), nullable=False)
+    timestamp = db.Column(db.TIMESTAMP(timezone=True),  server_default=sqlalchemy.func.now())
+    games_scored = db.relationship('GameScore')
+
+    def __repr__(self):
+        return f'<Game {self.id}: {self.name} from player {self.player_id}>'
 
 
-class GameScore(Base):
+class GameScore(db.Model):
     __tablename__ = 'game_scores'
-    id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey('games.id'), nullable=False)
-    player_id = Column(String(32), nullable=False)
-    score = Column(String(32), nullable=False)
-    explanation = Column(String(256))
-    feedback = Column(String(256))
+    id = db.Column(db.Integer, primary_key=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+    player_id = db.Column(db.String(32), nullable=False)
+    score = db.Column(db.String(32), nullable=False)
+    explanation = db.Column(db.String(256))
+    feedback = db.Column(db.String(256))
+
+    def __repr__(self):
+        return f'<Game Score {self.id} for game id {self.game_id} from player {self.player_id}>'
 
 
 def filter_dict_to_model(value_dict, model_class):
@@ -74,20 +86,20 @@ def model_to_dict(model_instance):
     return filter_dict_to_model(model_instance.__dict__, model_instance.__class__)
 
 
-def init_db():
-    # import all modules here that might define models so that
-    # they will be registered properly on the metadata.  Otherwise
-    # you will have to import them first before calling init_db()
-    # import yourapplication.models
-    Base.metadata.create_all(bind=engine)
-
-
-init_db()
+# def init_db():
+#     # import all modules here that might define models so that
+#     # they will be registered properly on the metadata.  Otherwise
+#     # you will have to import them first before calling init_db()
+#     # import yourapplication.models
+#     Base.metadata.create_all(bind=engine)
+#
+#
+# init_db()
 
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    db_session.remove()
+    db.session.remove()
 
 
 @app.route('/')
@@ -101,13 +113,13 @@ def save_game():
     query = Game.query.filter(Game.player_id == game.player_id)
     if query.count() > 0:
         game.id = query.first().id
-        if game not in db_session:
-            game = db_session.merge(game)
+        if game not in db.session:
+            game = db.session.merge(game)
 
     else:
-        db_session.add(game)
+        db.session.add(game)
 
-    db_session.commit()
+    db.session.commit()
 
     return jsonify({'id': game.id, 'player_id': game.player_id})
 
@@ -115,8 +127,8 @@ def save_game():
 @app.route('/save_game_score', methods=['POST'])
 def save_game_score():
     game_score = GameScore(**filter_dict_to_model(request.form, GameScore))
-    db_session.add(game_score)
-    db_session.commit()
+    db.session.add(game_score)
+    db.session.commit()
 
     return jsonify(dict(id=game_score.id, player_id=game_score.player_id,
         game_id=game_score.game_id))

@@ -1,6 +1,9 @@
 gunicorn
 flask
 flask_wtf
+Flask-Migrate
+Flask-SQLAlchemy
+psycopg2-binary
 sqlalchemy
 whitenoise
 
