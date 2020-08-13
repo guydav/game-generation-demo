@@ -77,7 +77,7 @@ class GameScore(db.Model):
 
 
 def filter_dict_to_model(value_dict, model_class):
-    valid_keys = [prop.key for prop in inspect(model_class).iterate_properties
+    valid_keys = [prop.key for prop in sqlalchemy.inspect(model_class).iterate_properties
         if isinstance(prop, sqlalchemy.orm.ColumnProperty)]
     return {key: value_dict[key] for key in value_dict if key in valid_keys}
 
